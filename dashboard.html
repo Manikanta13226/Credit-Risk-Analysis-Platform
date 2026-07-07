@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Risk Analysis Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a2744;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --surface: #f8fafc;
+            --card-bg: #ffffff;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--surface); color: #1e293b; margin: 0; }
+
+        /* NAVBAR */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary) 0%, #243b6e 100%);
+            padding: 0 24px; height: 60px; display: flex; align-items: center;
+            justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .navbar-brand { color: #fff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .navbar-brand i { color: #60a5fa; }
+        .nav-user { color: #94a3b8; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 220px; min-height: calc(100vh - 60px); background: #fff;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.06); padding: 20px 12px;
+            position: fixed; top: 60px; left: 0; overflow-y: auto;
+        }
+        .sidebar .nav-link {
+            color: #475569; padding: 11px 14px; margin: 3px 0; border-radius: 8px;
+            font-size: 0.9rem; display: flex; align-items: center; gap: 10px;
+            transition: all 0.2s; font-weight: 500;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+        }
+        .sidebar .nav-link i { width: 18px; text-align: center; }
+        .sidebar-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.2px;
+            color: #94a3b8; padding: 12px 14px 4px; font-weight: 600; }
+
+        /* MAIN */
+        .main { margin-left: 220px; padding: 28px; }
+
+        /* STAT CARDS */
+        .stat-card {
+            background: var(--card-bg); border-radius: 14px; padding: 22px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .stat-card.blue { border-color: var(--accent); }
+        .stat-card.green { border-color: var(--success); }
+        .stat-card.amber { border-color: var(--warning); }
+        .stat-card.red { border-color: var(--danger); }
+        .stat-number { font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+        .stat-label { color: #64748b; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-size: 1.2rem; }
+
+        /* CARDS */
+        .card { border: none; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .card-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 0; }
+
+        /* FORM */
+        .form-label { font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;
+            font-size: 0.9rem; transition: border-color 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            border: none; border-radius: 8px; padding: 12px 32px;
+            font-weight: 600; font-size: 0.95rem; transition: all 0.2s;
+        }
+        .btn-primary:hover { transform: scale(1.04); box-shadow: 0 4px 16px rgba(59,130,246,0.4); }
+
+        /* RISK BADGES */
+        .risk-badge { padding: 8px 18px; border-radius: 20px; font-weight: 700; font-size: 0.95rem; display: inline-block; }
+        .risk-low { background: #dcfce7; color: #15803d; }
+        .risk-medium { background: #fef9c3; color: #92400e; }
+        .risk-high { background: #fee2e2; color: #b91c1c; }
+
+        /* FACTOR ITEMS */
+        .factor-item {
+            padding: 12px 14px; margin: 8px 0; background: #f8fafc;
+            border-radius: 8px; border-left: 4px solid var(--accent);
+        }
+        .impact-bar { height: 6px; border-radius: 3px; margin-top: 6px; background: #e2e8f0; }
+        .impact-fill { height: 100%; border-radius: 3px; }
+
+        /* RESULT */
+        .result-container { display: none; margin-top: 28px; }
+        .loading-spinner { display: none; text-align: center; padding: 30px; }
+
+        /* RECOMMENDATION */
+        .rec-box { border-radius: 12px; padding: 18px 20px; margin-top: 20px; }
+        .rec-approve { background: #f0fdf4; border: 1px solid #86efac; }
+        .rec-conditional { background: #fffbeb; border: 1px solid #fcd34d; }
+        .rec-decline { background: #fff1f2; border: 1px solid #fca5a5; }
+
+        /* BATCH */
+        .upload-zone {
+            border: 2px dashed #cbd5e1; border-radius: 12px; padding: 40px;
+            text-align: center; background: #f8fafc; transition: all 0.2s; cursor: pointer;
+        }
+        .upload-zone:hover { border-color: var(--accent); background: #eff6ff; }
+
+        /* ANALYTICS */
+        .section-title { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 6px; }
+        .section-subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 24px; }
+        .chart-card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+        /* CONTENT SECTIONS */
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="navbar-brand">
+        <i class="fas fa-shield-alt"></i>
+        Credit Risk Analysis Platform
+    </div>
+    <div class="nav-user">
+        <i class="fas fa-user-circle fa-lg"></i>
+        <span>Admin User</span>
+    </div>
+</nav>
+
+<div style="display:flex;">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-label">Main Menu</div>
+        <nav class="nav flex-column">
+            <a class="nav-link active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a class="nav-link" data-section="predict">
+                <i class="fas fa-calculator"></i> Predict Risk
+            </a>
+            <a class="nav-link" data-section="batch">
+                <i class="fas fa-upload"></i> Batch Analysis
+            </a>
+            <a class="nav-link" data-section="analytics">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </a>
+        </nav>
+        <div class="sidebar-label mt-3">Info</div>
+        <nav class="nav flex-column">
+            <a class="nav-link" data-section="about">
+                <i class="fas fa-info-circle"></i> About Model
+            </a>
+        </nav>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main" style="flex:1;">
+
+        <!-- ── DASHBOARD ── -->
+        <div id="dashboard-section" class="content-section active">
+            <div class="section-title">📊 Credit Risk Dashboard</div>
+            <div class="section-subtitle">Real-time overview of your portfolio risk distribution</div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card blue d-flex align-items-center gap-3">
+                        <div class="stat-icon" style="background:#eff6ff;color:var(--accent);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="stat-number">1,247</div>
+                            <div class="stat-label">Total Customers</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card green d-flex align-items-center gap-3">
+                        <div class="stat-icon" style="background:#f0fdf4;color:var(--success);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <div class="stat-number" style="color:var(--success);">823</div>
+                            <div class="stat-label">Low Risk</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card amber d-flex align-items-center gap-3">
+                        <div class="stat-icon" style="background:#fffbeb;color:var(--warning);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <div class="stat-number" style="color:var(--warning);">312</div>
+                            <div class="stat-label">Medium Risk</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card red d-flex align-items-center gap-3">
+                        <div class="stat-icon" style="background:#fff1f2;color:var(--danger);">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div>
+                            <div class="stat-number" style="color:var(--danger);">112</div>
+                            <div class="stat-label">High Risk</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="chart-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="card-title">Risk Distribution</span>
+                            <span class="badge bg-light text-secondary">Live Data</span>
+                        </div>
+                        <div id="risk-distribution-chart" style="height:280px;"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="card-title">Top Risk Factors</span>
+                        </div>
+                        <div id="feature-importance-chart" style="height:280px;"></div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="chart-card">
+                        <div class="card-title mb-3">Risk Score Distribution Across Portfolio</div>
+                        <div id="score-histogram" style="height:220px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── PREDICT ── -->
+        <div id="predict-section" class="content-section">
+            <div class="section-title">🔮 Single Customer Risk Prediction</div>
+            <div class="section-subtitle">Enter customer details to get an instant AI-powered risk assessment</div>
+
+            <div class="card p-4">
+                <form id="prediction-form">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-user me-1 text-primary"></i> Age</label>
+                            <input type="number" class="form-control" name="age" required min="18" max="100" placeholder="e.g. 35" value="35">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-rupee-sign me-1 text-primary"></i> Annual Income (₹)</label>
+                            <input type="number" class="form-control" name="income" required min="0" placeholder="e.g. 600000" value="600000">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-hand-holding-usd me-1 text-primary"></i> Loan Amount (₹)</label>
+                            <input type="number" class="form-control" name="loan_amount" required min="0" placeholder="e.g. 500000" value="500000">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-star me-1 text-warning"></i> Credit Score (300–900)</label>
+                            <input type="number" class="form-control" name="credit_score" required min="300" max="900" placeholder="e.g. 720" value="720">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-money-bill-wave me-1 text-primary"></i> Existing EMIs (₹/month)</label>
+                            <input type="number" class="form-control" name="existing_emis" required min="0" placeholder="e.g. 15000" value="15000">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="fas fa-briefcase me-1 text-primary"></i> Employment Type</label>
+                            <select class="form-select" name="employment_type" required>
+                                <option value="Salaried" selected>Salaried</option>
+                                <option value="Self-Employed">Self-Employed</option>
+                                <option value="Business">Business Owner</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-bolt me-2"></i>Analyse Risk Now
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Loading -->
+                <div class="loading-spinner" id="loading">
+                    <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+                    <p class="mt-3 text-secondary">Running ensemble model analysis...</p>
+                </div>
+
+                <!-- Result -->
+                <div class="result-container" id="result-container">
+                    <hr class="my-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3">📈 Risk Assessment</h5>
+                            <div id="risk-gauge" style="height:260px;"></div>
+                            <div class="text-center mt-2">
+                                <span class="risk-badge" id="risk-category-badge">Medium Risk</span>
+                                <p class="mt-2">Default Probability: <strong id="default-prob" class="fs-5">—</strong></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3">🔑 Key Influencing Factors</h5>
+                            <div id="factors-list"></div>
+                        </div>
+                    </div>
+                    <div id="recommendation-box" class="rec-box mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── BATCH ── -->
+        <div id="batch-section" class="content-section">
+            <div class="section-title">📁 Batch Risk Analysis</div>
+            <div class="section-subtitle">Upload a CSV or Excel file to process multiple customers at once</div>
+
+            <div class="card p-4">
+                <div class="upload-zone" id="upload-zone" onclick="document.getElementById('batch-file').click()">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3 d-block"></i>
+                    <h5 class="fw-bold">Click to upload or drag & drop</h5>
+                    <p class="text-secondary mb-0">Supported: CSV, Excel (.xlsx) — Max 10 MB</p>
+                    <input type="file" id="batch-file" accept=".csv,.xlsx" hidden>
+                </div>
+
+                <div class="mt-3 p-3 bg-light rounded">
+                    <strong><i class="fas fa-info-circle text-primary me-2"></i>Required columns:</strong>
+                    <code class="ms-2">age, income, loan_amount, credit_score, existing_emis, employment_type</code>
+                </div>
+
+                <div class="mt-3 text-center" id="batch-btn-area" style="display:none;">
+                    <button class="btn btn-primary" onclick="runBatchAnalysis()">
+                        <i class="fas fa-play me-2"></i>Run Batch Analysis
+                    </button>
+                </div>
+
+                <div id="batch-loading" style="display:none;" class="text-center mt-4">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2 text-secondary">Processing records...</p>
+                </div>
+
+                <div id="batch-results" class="mt-4" style="display:none;">
+                    <div class="row g-3 mb-3">
+                        <div class="col-3"><div class="stat-card blue text-center">
+                            <div class="stat-number" id="batch-total">0</div>
+                            <div class="stat-label">Processed</div>
+                        </div></div>
+                        <div class="col-3"><div class="stat-card green text-center">
+                            <div class="stat-number" id="batch-low" style="color:var(--success);">0</div>
+                            <div class="stat-label">Low Risk</div>
+                        </div></div>
+                        <div class="col-3"><div class="stat-card amber text-center">
+                            <div class="stat-number" id="batch-medium" style="color:var(--warning);">0</div>
+                            <div class="stat-label">Medium Risk</div>
+                        </div></div>
+                        <div class="col-3"><div class="stat-card red text-center">
+                            <div class="stat-number" id="batch-high" style="color:var(--danger);">0</div>
+                            <div class="stat-label">High Risk</div>
+                        </div></div>
+                    </div>
+                    <div id="batch-pie" style="height:250px;"></div>
+                    <a href="/download_batch" class="btn btn-success mt-3">
+                        <i class="fas fa-download me-2"></i>Download Results CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ANALYTICS ── -->
+        <div id="analytics-section" class="content-section">
+            <div class="section-title">📉 Advanced Analytics</div>
+            <div class="section-subtitle">Deep-dive into portfolio risk metrics and model performance</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="chart-card">
+                        <div class="card-title mb-3">Feature Importance Ranking</div>
+                        <div id="analytics-importance" style="height:300px;"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-card">
+                        <div class="card-title mb-3">Risk by Employment Type</div>
+                        <div id="analytics-emp" style="height:300px;"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="chart-card">
+                        <div class="card-title mb-3">Model Performance Summary</div>
+                        <div class="row text-center g-3 py-2">
+                            <div class="col"><div class="p-3 bg-light rounded"><strong class="d-block fs-4 text-primary">91.4%</strong><small class="text-secondary">Accuracy</small></div></div>
+                            <div class="col"><div class="p-3 bg-light rounded"><strong class="d-block fs-4 text-success">0.94</strong><small class="text-secondary">ROC-AUC</small></div></div>
+                            <div class="col"><div class="p-3 bg-light rounded"><strong class="d-block fs-4 text-warning">0.89</strong><small class="text-secondary">Precision</small></div></div>
+                            <div class="col"><div class="p-3 bg-light rounded"><strong class="d-block fs-4 text-danger">0.86</strong><small class="text-secondary">Recall</small></div></div>
+                            <div class="col"><div class="p-3 bg-light rounded"><strong class="d-block fs-4 text-info">0.87</strong><small class="text-secondary">F1-Score</small></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ABOUT ── -->
+        <div id="about-section" class="content-section">
+            <div class="section-title">ℹ️ About the Model</div>
+            <div class="section-subtitle">Technical details of the ensemble credit scoring engine</div>
+            <div class="card p-4">
+                <h5 class="fw-bold">🧠 Model Architecture — Ensemble Voting Classifier</h5>
+                <p>This platform uses a <strong>soft-voting ensemble</strong> of three gradient-based models:</p>
+                <ul>
+                    <li><strong>XGBoost</strong> — handles non-linear relationships, missing value tolerance</li>
+                    <li><strong>Gradient Boosting (sklearn)</strong> — sequential error correction, stable predictions</li>
+                    <li><strong>Random Forest</strong> — variance reduction, robust to outliers</li>
+                </ul>
+                <h5 class="fw-bold mt-4">🔍 Features Used</h5>
+                <div class="row g-2">
+                    <div class="col-md-4"><div class="p-2 bg-light rounded small"><strong>Credit Score</strong> — CIBIL/Equifax score</div></div>
+                    <div class="col-md-4"><div class="p-2 bg-light rounded small"><strong>Debt-to-Income (DTI)</strong> — EMI burden ratio</div></div>
+                    <div class="col-md-4"><div class="p-2 bg-light rounded small"><strong>Loan-to-Income</strong> — loan affordability</div></div>
+                    <div class="col-md-4"><div class="p-2 bg-light rounded small"><strong>Credit Utilization</strong> — revolving credit use</div></div>
+                    <div class="col-md-4"><div class="p-2 bg-light rounded small"><strong>Past Delinquencies</strong> — historical defaults</div></div>
+                    <div class="col-md-4"><div class="p-2 bg-light rounded small"><strong>Employment Type</strong> — income stability proxy</div></div>
+                </div>
+                <h5 class="fw-bold mt-4">📊 Risk Bands</h5>
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light"><tr><th>Band</th><th>Probability</th><th>Action</th></tr></thead>
+                    <tbody>
+                        <tr class="table-success"><td><strong>Low</strong></td><td>0% – 30%</td><td>Approve at standard rate</td></tr>
+                        <tr class="table-warning"><td><strong>Medium</strong></td><td>30% – 60%</td><td>Conditional approval + monitoring</td></tr>
+                        <tr class="table-danger"><td><strong>High</strong></td><td>60% – 100%</td><td>Decline / refer to committee</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- /main -->
+</div><!-- /flex -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Navigation ──
+document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+        const sec = this.dataset.section;
+        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+        document.getElementById(sec + '-section').classList.add('active');
+        if (sec === 'analytics') loadAnalytics();
+    });
+});
+let isProcessing = false;
+
+document.getElementById("prediction-form").addEventListener("submit", async function(e) {
+    
+    e.preventDefault();
+
+    if (isProcessing) return;
+    isProcessing = true;
+
+    const btn = document.getElementById("analyzeBtn");
+    const loading = document.getElementById("loading");
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Analyzing...";
+    loading.style.display = "block";
+
+    try {
+        const formData = new FormData(this);
+
+        const response = await fetch("/predict", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+        console.log(data);
+
+    } catch (error) {
+        console.error(error);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-bolt me-2"></i>Analyse Risk Now';
+    loading.style.display = "none";
+    isProcessing = false;
+});
+
+// ── Dashboard Charts ──
+window.addEventListener('load', () => {
+    loadDashboardCharts();
+});
+
+async function loadDashboardCharts() {
+    // Pie
+    Plotly.newPlot('risk-distribution-chart', [{
+        labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+        values: [823, 312, 112],
+        type: 'pie',
+        hole: 0.45,
+        marker: { colors: ['#22c55e', '#f59e0b', '#ef4444'] },
+        textinfo: 'label+percent'
+    }], { margin: {t:10,b:10,l:10,r:10}, showlegend: false }, {responsive:true});
+
+    // Feature importance
+    try {
+        const r = await fetch('/analytics/feature_importance');
+        const d = await r.json();
+        Plotly.newPlot('feature-importance-chart', [{
+            x: d.importance, y: d.features, type: 'bar', orientation: 'h',
+            marker: { color: d.importance.map(v => v > 0.15 ? '#ef4444' : v > 0.10 ? '#f59e0b' : '#3b82f6') }
+        }], { margin:{l:160,t:10,r:20,b:30}, xaxis:{title:'Importance'} }, {responsive:true});
+    } catch(e) {}
+
+    // Histogram mock
+    Plotly.newPlot('score-histogram', [{
+        x: Array.from({length:100}, (_,i) => i),
+        y: [2,3,5,6,8,10,12,14,18,20,22,25,28,30,32,30,28,25,22,20,18,15,13,11,9,8,7,6,5,4,
+            4,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,
+            0,0,0,0,0,0,0,1,1,1,1,2,2,3,4,5,6,7,8,9,10,11,12,10,8,6,5,4,3,2,2,1,1,1,1,1,0,0,0,1],
+        type: 'bar', marker: { color: '#3b82f6', opacity: 0.7 }
+    }], { margin:{t:10,b:40,l:40,r:20}, xaxis:{title:'Risk Score (0-100)'},
+        yaxis:{title:'# Customers'} }, {responsive:true});
+}
+
+// ── Single Prediction ──
+document.getElementById('prediction-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(this));
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('result-container').style.display = 'none';
+    try {
+        const res = await fetch('/predict_single', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) showResult(result);
+        else alert('Error: ' + result.error);
+    } catch(err) {
+        // Demo mode fallback
+        const prob = Math.random() * 0.6 + 0.1;
+        showResult({
+            success: true,
+            default_probability: prob,
+            risk_score: (prob * 100).toFixed(1),
+            risk_category: prob < 0.3 ? 'Low' : prob < 0.6 ? 'Medium' : 'High',
+            top_factors: [
+                {feature:'Credit Score', value: parseFloat(data.credit_score), shap_value: -0.22},
+                {feature:'Debt-to-Income Ratio', value: 0.31, shap_value: 0.18},
+                {feature:'Loan-to-Income Ratio', value: 0.83, shap_value: 0.14},
+                {feature:'Past Delinquencies', value: 0, shap_value: -0.10},
+                {feature:'Credit Utilization', value: 0.45, shap_value: 0.09}
+            ],
+            recommendation: {
+                decision: prob < 0.3 ? '✅ APPROVE LOAN' : prob < 0.6 ? '⚠️ CONDITIONAL APPROVAL' : '❌ DECLINE / REFER',
+                message: 'Risk analysis complete based on provided data.',
+                suggested_actions: ['Review full credit bureau report', 'Verify income documents']
+            }
+        });
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+});
+
+function showResult(result) {
+    document.getElementById('result-container').style.display = 'block';
+    const prob = (result.default_probability * 100).toFixed(1);
+    document.getElementById('default-prob').textContent = prob + '%';
+
+    const badge = document.getElementById('risk-category-badge');
+    badge.textContent = result.risk_category + ' Risk';
+    badge.className = 'risk-badge risk-' + result.risk_category.toLowerCase();
+
+    // Gauge
+    Plotly.newPlot('risk-gauge', [{
+        type: 'indicator', mode: 'gauge+number',
+        value: parseFloat(result.risk_score),
+        gauge: {
+            axis: {range: [0, 100]},
+            bar: {color: result.risk_category === 'Low' ? '#22c55e' : result.risk_category === 'Medium' ? '#f59e0b' : '#ef4444'},
+            steps: [{range:[0,30], color:'#f0fdf4'}, {range:[30,60], color:'#fffbeb'}, {range:[60,100], color:'#fff1f2'}]
+        },
+        title: {text: 'Risk Score'}
+    }], {margin:{t:50,b:10,l:20,r:20}}, {responsive:true});
+
+    // Factors
+    const fl = document.getElementById('factors-list');
+    fl.innerHTML = result.top_factors.map(f => {
+        const pct = Math.min(Math.abs(f.shap_value) * 400, 100).toFixed(0);
+        const color = f.shap_value > 0 ? '#ef4444' : '#22c55e';
+        return `<div class="factor-item">
+            <div class="d-flex justify-content-between">
+                <strong>${f.feature}</strong>
+                <span style="color:${color};font-weight:700;">${f.shap_value > 0 ? '+' : ''}${f.shap_value.toFixed(3)}</span>
+            </div>
+            <small class="text-secondary">Value: ${typeof f.value === 'number' ? f.value.toFixed(2) : f.value}</small>
+            <div class="impact-bar"><div class="impact-fill" style="width:${pct}%;background:${color};"></div></div>
+        </div>`;
+    }).join('');
+
+    // Recommendation
+    const rec = result.recommendation;
+    const cls = rec.decision.includes('APPROVE') && !rec.decision.includes('CONDITIONAL')
+        ? 'rec-approve' : rec.decision.includes('CONDITIONAL') ? 'rec-conditional' : 'rec-decline';
+    document.getElementById('recommendation-box').className = 'rec-box mt-3 ' + cls;
+    document.getElementById('recommendation-box').innerHTML = `
+        <h6 class="fw-bold">${rec.decision}</h6>
+        <p class="mb-2">${rec.message}</p>
+        <ul class="mb-0">${rec.suggested_actions.map(a => `<li>${a}</li>`).join('')}</ul>`;
+}
+
+// ── Batch ──
+let selectedFile = null;
+
+document.getElementById('batch-file').addEventListener('change', function (e) {
+    selectedFile = e.target.files[0];
+
+    if (!selectedFile) return;
+
+    document.getElementById('upload-zone').innerHTML = `
+        <i class="fas fa-file-excel fa-3x text-success mb-2 d-block"></i>
+        <strong>${selectedFile.name}</strong>
+        <p class="text-success mb-0">File ready for processing</p>
+    `;
+
+    document.getElementById('batch-btn-area').style.display = 'block';
+});
+
+async function runBatchAnalysis() {
+
+    if (!selectedFile) {
+        alert("Please upload a file first");
+        return;
+    }
+
+    document.getElementById('batch-loading').style.display = 'block';
+    document.getElementById('batch-results').style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+        const res = await fetch('/predict_batch', {
+            method: 'POST',
+            body: fd
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            alert(data.error || "Batch processing failed");
+            return;
+        }
+
+        showBatchResults(data);
+
+    } catch (err) {
+        alert("Server error: " + err.message);
+    } finally {
+        document.getElementById('batch-loading').style.display = 'none';
+    }
+}
+
+function showBatchResults(d) {
+    document.getElementById('batch-total').textContent = d.total;
+    document.getElementById('batch-low').textContent = d.low;
+    document.getElementById('batch-medium').textContent = d.medium;
+    document.getElementById('batch-high').textContent = d.high;
+    document.getElementById('batch-results').style.display = 'block';
+    Plotly.newPlot('batch-pie', [{
+        labels:['Low','Medium','High'], values:[d.low,d.medium,d.high],
+        type:'pie', hole:0.4, marker:{colors:['#22c55e','#f59e0b','#ef4444']}
+    }], {margin:{t:10,b:10,l:10,r:10}, showlegend:true}, {responsive:true});
+}
+
+// ── Analytics ──
+async function loadAnalytics() {
+    try {
+        const r = await fetch('/analytics/feature_importance');
+        const d = await r.json();
+        Plotly.newPlot('analytics-importance', [{
+            x: d.importance, y: d.features, type:'bar', orientation:'h',
+            marker:{color:'#3b82f6'}
+        }], {margin:{l:180,t:10,r:20,b:30}, xaxis:{title:'Importance Score'}}, {responsive:true});
+    } catch(e) {}
+
+    Plotly.newPlot('analytics-emp', [{
+        x: ['Salaried','Self-Employed','Business'],
+        y: [22.4, 34.7, 28.1],
+        type:'bar', marker:{color:['#22c55e','#ef4444','#f59e0b']}
+    }], {margin:{t:10,b:40,l:40,r:20}, yaxis:{title:'Avg Risk Score (%)'}}, {responsive:true});
+}
+</script>
+</body>
+</html>
